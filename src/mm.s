@@ -128,7 +128,7 @@
 //      Places the result in r0
 .macro NEXT_FREE_PAYLOAD payload_addr
     HEADER \payload_addr
-    add r0, r0, #WORD_SIZE, LSL #1  // r0 = r0 + 2 * WORD_SIZE
+    add r0, r0, #WORD_SIZE, LSL #1  // r0 = header + 2 * WORD_SIZE
     ldr r0, [r0]
 .endm
 
@@ -140,11 +140,30 @@
 //      Places the result in r0
 .macro PREV_FREE_PAYLOAD payload_addr
     HEADER \payload_addr
-    add r0, r0, #WORD_SIZE  // r0 = r0 + WORD_SIZE
+    add r0, r0, #WORD_SIZE  // r0 = header + WORD_SIZE
     ldr r0, [r0]
 .endm
 
+// Calculates the index of the free list for blocks of the given size
+//
+// Parameter:
+//      r0 - The size of the block
+// Returns:
+//      r0 - The index of the segregated free list
 get_seglist_index:
+    push {r4-r12, lr}
+    mov r4, r0, LSL #5  // Divide by 32
+    mov r0, #0
+loop:
+    cmp r0, #NUM_SEG_LISTS - 1
+    beq return_index
+    cmp r4, #0
+    beq return_index
+    mov r4, r4, LSL #1  // Divide by 2
+    add r0, r0, #1
+    b loop
+return_index:
+    pop {r4-r12, lr}
     bx lr
 
 remove_from_list:
