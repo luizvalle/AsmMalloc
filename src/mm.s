@@ -7,6 +7,33 @@
 .global mm_malloc
 .global mm_free
 
+/*
+ *       Free block               Allocated block
+ * +----------------+----+    +----------------+----+
+ * |  Size (28 bits)| 000|    | Size (28 bits) | 001|
+ * |                |    |    |                |    |
+ * +----------------+----+    +----------------+----+
+ * |        prev_p       |    |                     |
+ * |                     |    |                     |
+ * +---------------------+    |                     |
+ * |        next_p       |    |                     |
+ * |                     |    |                     |
+ * +---------------------+    |                     |
+ * |                     |    |       Payload       |
+ * |                     |    |                     |
+ * |                     |    |                     |
+ * |        Padding      |    |                     |
+ * |                     |    |                     |
+ * |                     |    |                     |
+ * |                     |    |                     |
+ * +----------------+----+    +----------------+----+
+ * |  Size (28 bits)| 000|    | Size (28 bits) | 001|
+ * |                |    |    |                |    |
+ * +----------------+----+    +----------------+----+
+ */
+
+.text
+
 // Retrieves the block size
 //
 // Parameter:
@@ -62,19 +89,60 @@
     pop {r1,r2}
 .endm
 
+// Calculates the address of the next block's payload
+//
+// Parameter:
+//      payload_addr - Register containng the payload address
+// Return:
+//      Places the result in r0
 .macro NEXT_PAYLOAD payload_addr
+    push {r1}
+    mov r1, \payload_addr
+    HEADER \payload_addr
+    SIZE r0
+    add r0, r0, r1
+    pop {r1}
 .endm
 
+// Calculates the address of the previous block's payload
+//
+// Parameter:
+//      payload_addr - Register containng the payload address
+// Return:
+//      Places the result in r0
 .macro PREV_PAYLOAD payload_addr
+    push {r1, r2}
+    mov r1, \payload_addr
+    mov r2, #WORD_SIZE
+    sub r0, r1, r2, LSL #1  // r0 = payload - 2 * WORD_SIZE
+    SIZE r0  // Size of previous block
+    sub r0, r1, r0  // payload - prev_size
+    pop {r1}
 .endm
 
+// Calculates the address of the next free block's payload
+//
+// Parameter:
+//      payload_addr - Register containng the payload address
+// Return:
+//      Places the result in r0
 .macro NEXT_FREE_PAYLOAD payload_addr
+    HEADER \payload_addr
+    add r0, r0, #WORD_SIZE, LSL #1  // r0 = r0 + 2 * WORD_SIZE
+    ldr r0, [r0]
 .endm
 
+// Calculates the address of the previous free block's payload
+//
+// Parameter:
+//      payload_addr - Register containng the payload address
+// Return:
+//      Places the result in r0
 .macro PREV_FREE_PAYLOAD payload_addr
+    HEADER \payload_addr
+    add r0, r0, #WORD_SIZE  // r0 = r0 + WORD_SIZE
+    ldr r0, [r0]
 .endm
-
-.text
 
 get_seglist_index:
     bx lr
