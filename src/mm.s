@@ -127,9 +127,12 @@
 // Return:
 //      Places the result in r0
 .macro NEXT_FREE_PAYLOAD payload_addr
+    push {r1}
     HEADER \payload_addr
-    add r0, r0, #WORD_SIZE, LSL #1  // r0 = header + 2 * WORD_SIZE
+    mov r1, #WORD_SIZE
+    add r0, r0, r1, LSL #1  // r0 = header + 2 * WORD_SIZE
     ldr r0, [r0]
+    pop {r1}
 .endm
 
 // Calculates the address of the previous free block's payload
@@ -166,7 +169,27 @@ return_index:
     pop {r4-r12, lr}
     bx lr
 
+// Removes a free block from its list
+//
+// Parameter:
+//      r0 - The address of the block's payload
+// Returns:
+//      Nothing
 remove_from_list:
+    push {r4-r12, lr}
+    mov r4, r0  // Copy the payload's address
+    PREV_FREE_PAYLOAD r0
+    HEADER r0
+    mov r5, r0  // r5 = header of previous free block
+    mov r0, r4
+    NEXT_FREE_PAYLOAD r0
+    HEADER r0
+    mov r6, r0  // r6 = header of the next free block
+    // prev_free_block.next = next_free_block
+    str r6, [r5, #WORD_SIZE + WORD_SIZE]
+    // next_free_block.prev = prev_free_block
+    str r5, [r6, #WORD_SIZE]
+    pop {r4-r12, lr}
     bx lr
 
 add_to_list:
