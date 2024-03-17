@@ -79,14 +79,13 @@
 // Return:
 //      Places the result in r0
 .macro FOOTER payload_addr
-    push {r1,r2}
+    push {r1}
     mov r1, \payload_addr  // Save a copy
     HEADER \payload_addr
     SIZE r0
-    mov r2, #WORD_SIZE
-    sub r0, r0, r2, LSL #1  // r0 = size - 2 * WORD_SIZE
+    sub r0, r0, # 2 * WORD_SIZE  // r0 = size - 2 * WORD_SIZE
     add r0, r1, r0  // payload + size - 2 * WORD_SIZE
-    pop {r1,r2}
+    pop {r1}
 .endm
 
 // Calculates the address of the next block's payload
@@ -111,10 +110,9 @@
 // Return:
 //      Places the result in r0
 .macro PREV_PAYLOAD payload_addr
-    push {r1, r2}
+    push {r1}
     mov r1, \payload_addr
-    mov r2, #WORD_SIZE
-    sub r0, r1, r2, LSL #1  // r0 = payload - 2 * WORD_SIZE
+    sub r0, r1, # 2 * WORD_SIZE  // r0 = previous block's footer
     SIZE r0  // Size of previous block
     sub r0, r1, r0  // payload - prev_size
     pop {r1}
@@ -127,12 +125,9 @@
 // Return:
 //      Places the result in r0
 .macro NEXT_FREE_PAYLOAD payload_addr
-    push {r1}
     HEADER \payload_addr
-    mov r1, #WORD_SIZE
-    add r0, r0, r1, LSL #1  // r0 = header + 2 * WORD_SIZE
+    add r0, r0, # 2 * WORD_SIZE  // r0 = header + 2 * WORD_SIZE
     ldr r0, [r0]
-    pop {r1}
 .endm
 
 // Calculates the address of the previous free block's payload
@@ -155,14 +150,14 @@
 //      r0 - The index of the segregated free list
 get_seglist_index:
     push {r4-r12, lr}
-    mov r4, r0, LSL #5  // Divide by 32
+    mov r4, r0, LSR #5  // Divide by 32
     mov r0, #0
 loop:
     cmp r0, #NUM_SEG_LISTS - 1
     beq return_index
     cmp r4, #0
     beq return_index
-    mov r4, r4, LSL #1  // Divide by 2
+    mov r4, r4, LSR #1  // Divide by 2
     add r0, r0, #1
     b loop
 return_index:
@@ -186,7 +181,7 @@ remove_from_list:
     HEADER r0
     mov r6, r0  // r6 = header of the next free block
     // prev_free_block.next = next_free_block
-    str r6, [r5, #WORD_SIZE + WORD_SIZE]
+    str r6, [r5, #2 * WORD_SIZE]
     // next_free_block.prev = prev_free_block
     str r5, [r6, #WORD_SIZE]
     pop {r4-r12, lr}
