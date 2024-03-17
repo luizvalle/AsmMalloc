@@ -187,7 +187,23 @@ remove_from_list:
     pop {r4-r12, lr}
     bx lr
 
+// Adds a free block to the appropriate list
+//
+// Parameter:
+//      r0 - The address of the block's payload
+// Returns:
+//      Nothing
 add_to_list:
+    push {r4-r12, lr}
+    mov r4, r0  // Store the payload pointer
+    HEADER r4
+    SIZE r0
+    bl get_seglist_index
+    ldr r5, =seg_listp
+    ldr r5, [r5]  // The head of the segmented free list
+    HEADER r4
+    // TODO
+    pop {r4-r12, lr}
     bx lr
 
 extend_heap:
@@ -213,3 +229,8 @@ mm_malloc:
 
 mm_free:
     bx lr
+
+.bss
+
+.align 2
+seg_listp: .space NUM_SEG_LISTS

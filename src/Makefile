@@ -1,12 +1,15 @@
 .PHONY: all
-all: clean mm
+all: clean test
 
-mm: mm.o
-	ld $^ -o $@
+test: mm.o test.o
+	gcc $^ -o $@
+
+test.o: test.c
+	gcc $^ -c -o $@
 
 mm.o: mm.s
 	as $^ -o $@ 
 
 .PHONY: clean
 clean:
-	rm -rf *.o mm
+	rm -rf *.o test
